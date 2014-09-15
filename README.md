@@ -1,0 +1,4 @@
+hcl
+===
+
+a configuration language
