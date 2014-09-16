@@ -32,6 +32,17 @@ describe 'lexer', ->
     it 'structure.hcl', ->
         expect(parse('structure.hcl')).to.be.ok
 
-describe.skip 'parser', ->
     it 'assign_colon.hcl', ->
         expect(parse('assign_colon.hcl')).to.be.ok
+
+    it 'structure_empty.hcl', ->
+        expect(parse('structure_empty.hcl')).to.be.ok
+
+    it 'complex.hcl', ->
+        expect(parse('complex.hcl')).to.be.ok
+
+    it 'assign_deep.hcl', ->
+        expect(parse('assign_deep.hcl')).to.be.ok
+
+    it 'types.hcl', ->
+        expect(parse('types.hcl')).to.be.ok

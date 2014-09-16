@@ -11,16 +11,15 @@ objectlist
     = objectitem*
 
 objectitem
-    = _ identifier:identifier equal literal:literal _ { return {Key: identifier, Value: literal} }
-    / _ block:block _ { return block }
+    = _ identifier:identifier equal literal:literal _ ","? _ { return {Key: identifier, Value: literal} }
+    / _ block:block _ ","? _ { return block }
 
 object
     = "{" objectlist:objectlist "}" { return {Type: ValueTypeObject, Value: objectlist} }
     / "{" _ "}" { return {Type: ValueTypeObject} }
 
 block
-    = blockId:blockId _ equal* _ object:object { return {Key: blockId, Value: object} }
-    / blockId:blockId _ block:block { return {Key: blockId, Type: ValueTypeObject, Value: [block]} }
+    = blockId:blockId _ equal? literal:literal { return {Key: blockId, Value: literal} }
 
 blockId
     = identifier
@@ -34,10 +33,10 @@ equal
 
 literal
     = list
+    / block
     / string
     / number
     / object
-    / block
     / "true"
     / "false"
 
