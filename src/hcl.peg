@@ -1,0 +1,150 @@
+{
+    // initializer
+    var ValueTypeString = 'STRING'
+      , ValueTypeObject = 'OBJECT'
+}
+
+start
+    = _ objectlist:objectlist _ { return objectlist }
+
+objectlist
+    = objectitem*
+
+objectitem
+    = _ identifier:identifier equal literal:literal _ { return {Key: identifier, Value: literal} }
+    / _ block:block _ { return block }
+
+object
+    = "{" objectlist:objectlist "}" { return {Type: ValueTypeObject, Value: objectlist} }
+    / "{" _ "}" { return {Type: ValueTypeObject} }
+
+block
+    = blockId:blockId _ equal* _ object:object { return {Key: blockId, Value: object} }
+    / blockId:blockId _ block:block { return {Key: blockId, Type: ValueTypeObject, Value: [block]} }
+
+blockId
+    = identifier
+    / string
+
+identifier
+    = first:[a-zA-Z_] rest:[a-zA-Z0-9_$]* { return first + rest.join(""); }
+
+equal
+    = _ (":" / "=") _
+
+literal
+    = list
+    / string
+    / number
+    / object
+    / block
+    / "true"
+    / "false"
+
+list
+    = "[" _ first:literal rest:(_ "," _ literal)* _ "]" { return [first].concat(rest.map(function(d) { return d[3]; })); }
+    / "[" _ "]" { return []; }
+
+/*
+    string
+*/
+
+string "string"
+    = '"' chars:double_string_char* '"' { return chars.join(""); }
+    / "'" chars:single_string_char* "'" { return chars.join(""); }
+
+double_string_char
+    = !('"' / "\\") char_:. { return char_; }
+    / "\\" sequence:escape_sequence { return sequence; }
+
+single_string_char
+    = !("'" / "\\") char_:. { return char_; }
+    / "\\" sequence:escape_sequence { return sequence; }
+
+escape_sequence
+    = character_escape_sequence
+    / "0" !digit { return "\0"; }
+    / hex_escape_sequence
+    / unicode_escape_sequence
+
+character_escape_sequence
+    = single_escape_character
+    / non_escape_character
+
+single_escape_character
+    = char_:['"\\bfnrtv] { return char_.replace("b", "\b").replace("f", "\f").replace("n", "\n").replace("r", "\r").replace("t", "\t").replace("v", "\x0B"); }
+
+non_escape_character
+    = !escape_character char_:. { return char_; }
+
+escape_character
+    = single_escape_character
+    / digit
+    / "x"
+    / "u"
+
+hex_escape_sequence
+    = "x" h1:hex_digit h2:hex_digit { return String.fromCharCode(+("0x" + h1 + h2)); }
+
+unicode_escape_sequence
+    = "u" h1:hex_digit h2:hex_digit h3:hex_digit h4:hex_digit { return String.fromCharCode(+("0x" + h1 + h2 + h3 + h4)); }
+
+/*
+    numeric
+*/
+
+number "number"
+    = "-" _ number:number { return -number; }
+    / int_:int frac:frac exp:exp { return +(int_ + frac + exp); }
+    / int_:int frac:frac { return +(int_ + frac); }
+    / int_:int exp:exp { return +(int_ + exp); }
+    / frac:frac { return +frac; }
+    / int_:int { return +int_; }
+
+int
+    = digit19:digit19 digits:digits { return digit19 + digits; }
+    / digit:digit
+
+frac
+    = "." digits:digits { return "." + digits; }
+
+exp
+    = e:e digits:digits { return e + digits; }
+
+digits
+    = digits:digit+ { return digits.join(""); }
+
+e
+    = e:[eE] sign:[+-]? { return e + sign; }
+
+digit
+    = [0-9]
+
+digit19
+    = [1-9]
+
+hex_digit
+    = [0-9a-fA-F]
+
+_ "whitespace"
+    = whitespace*
+
+whitespace
+    = [ \t\n\r]
+    / comment
+
+comment "comment"
+    = multi_line_comment
+    / single_line_comment
+
+multi_line_comment
+    = "/*" (multi_line_comment / (!"*/" anything))* "*/"
+
+single_line_comment
+    = ("//" / "#") (!line_terminator anything)*
+
+line_terminator
+    = [\n\r\u2028\u2029]
+
+anything
+    = .
