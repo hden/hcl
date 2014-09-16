@@ -137,13 +137,10 @@ comment "comment"
     / single_line_comment
 
 multi_line_comment
-    = "/*" (multi_line_comment / (!"*/" anything))* "*/"
+    = "/*" (multi_line_comment / (!"*/" .))* "*/"
 
 single_line_comment
-    = ("//" / "#") (!line_terminator anything)*
+    = ("//" / "#") (!line_terminator .)*
 
 line_terminator
     = [\n\r\u2028\u2029]
-
-anything
-    = .
