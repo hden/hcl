@@ -4,13 +4,17 @@ fs       = require 'fs'
 {expect} = require 'chai'
 parser   = require '../'
 
-parse = (filename = '') ->
-    ctx = fs.readFileSync("#{__dirname}/fixtures/#{filename}", 'utf-8')
-    res = parser.parse ctx
-    console.log JSON.stringify res
-    res
+make_parse = (path = 'lexer_fixtures')  ->
+    (filename = '') ->
+        ctx = fs.readFileSync("#{__dirname}/#{path}/#{filename}", 'utf-8')
+        res = parser.parse ctx
+        console.log JSON.stringify res
+        res
 
 describe 'lexer', ->
+
+    parse = make_parse()
+
     it 'comment.hcl', ->
         expect(parse('comment.hcl')).to.be.ok
 
@@ -46,3 +50,55 @@ describe 'lexer', ->
 
     it 'types.hcl', ->
         expect(parse('types.hcl')).to.be.ok
+
+describe 'parser', ->
+
+    parse = make_parse('decoder_fixture')
+
+    it 'decode_policy.hcl', ->
+        ast = parse('decode_policy.hcl')
+        expect(ast).to.be.an('array')
+
+    it 'decode_tf_variable.hcl', ->
+        ast = parse('decode_tf_variable.hcl')
+        expect(ast).to.be.an('array')
+
+    it 'empty.hcl', ->
+        ast = parse('empty.hcl')
+        expect(ast).to.be.an('array')
+
+    it 'empty.hcl', ->
+        ast = parse('empty.hcl')
+        expect(ast).to.be.an('array')
+
+    it 'flat.hcl', ->
+        ast = parse('flat.hcl')
+        expect(ast).to.be.an('array')
+
+    it 'scientific.hcl', ->
+        ast = parse('scientific.hcl')
+        expect(ast).to.be.an('array')
+
+    it 'structure.hcl', ->
+        ast = parse('structure.hcl')
+        expect(ast).to.be.an('array')
+
+    it 'structure2.hcl', ->
+        ast = parse('structure2.hcl')
+        expect(ast).to.be.an('array')
+
+    it 'structure_flatmap.hcl', ->
+        ast = parse('structure_flatmap.hcl')
+        expect(ast).to.be.an('array')
+
+    it 'structure_list.hcl', ->
+        ast = parse('structure_list.hcl')
+        expect(ast).to.be.an('array')
+
+    it 'structure_multi.hcl', ->
+        ast = parse('structure_multi.hcl')
+        expect(ast).to.be.an('array')
+
+    it 'terraform_heroku.hcl', ->
+        ast = parse('terraform_heroku.hcl')
+        expect(ast).to.be.an('array')

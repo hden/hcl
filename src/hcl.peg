@@ -1,63 +1,109 @@
-{
-    // initializer
-    var ValueTypeString = 'STRING'
-      , ValueTypeObject = 'OBJECT'
-}
 
 start
-    = _ objectlist:objectlist _ { return objectlist }
+    = _ sections:section* _ { return sections; }
 
-objectlist
-    = objectitem*
+literal
+    = boolean
+    / object
+    / list
+    / block
+    / number
+    / string
 
-objectitem
-    = _ identifier:identifier equal literal:literal _ ","? _ { return {Key: identifier, Value: literal} }
-    / _ block:block _ ","? _ { return block }
+/* ----- section ----- */
 
-object
-    = "{" objectlist:objectlist "}" { return {Type: ValueTypeObject, Value: objectlist} }
-    / "{" _ "}" { return {Type: ValueTypeObject} }
+section
+    = parent_key:identifier _ value:section {
+        return {parent_key:parent_key, hint: 'section', value: value};
+    }
+    / block_member
+    / block
+
+/* ----- block ----- */
 
 block
-    = blockId:blockId _ equal? literal:literal { return {Key: blockId, Value: literal} }
+    = begin_object
+        members:(
+            first:block_member
+            rest:(_ m:block_member { return m; })*
+            {
+                var result = {hint: 'block'};
 
-blockId
-    = identifier
-    / string
+                [first]
+                .concat(rest)
+                .forEach(function (e) {
+                    result[e.parent_key] = e.value;
+                });
+
+                return result;
+            }
+        )?
+    end_object
+    { return members !== null ? members: {}; }
+
+block_member
+    = parent_key:identifier assignment value:literal _ {
+        return {parent_key: parent_key, hint: 'block_member', value: value};
+    }
+    / parent_key:identifier value:block _
 
 identifier
     = first:[a-zA-Z_] rest:[a-zA-Z0-9_$]* { return first + rest.join(""); }
-
-equal
-    = _ (":" / "=") _
-
-literal
-    = list
-    / block
     / string
-    / number
-    / object
-    / "true"
-    / "false"
+
+/* ----- map ----- */
+
+object
+    = begin_object
+        members:(
+            first:object_member
+            rest:(value_separator m:object_member { return m; })*
+            value_separator?
+            {
+                var result = {hint: 'object'};
+
+                [first]
+                .concat(rest)
+                .forEach(function (e) {
+                    result[e.name] = e.value;
+                });
+
+                return result;
+            }
+        )?
+    end_object
+    { return members !== null ? members: {}; }
+
+object_member
+    = name:string name_separator value:literal {
+        return { name: name, value: value };
+    }
+
+/* ----- list ----- */
 
 list
-    = "[" _ first:literal rest:(_ "," _ literal)* _ "]" { return [first].concat(rest.map(function(d) { return d[3]; })); }
-    / "[" _ "]" { return []; }
+    = begin_array first:literal rest:(value_separator literal)* end_array {
+        return [first].concat(rest.map(function(d) { return d[1]; }));
+    }
+    / begin_array end_array { return []; }
 
-/*
-    string
-*/
+/* ----- complex grammer ----- */
+
+begin_array     = _ "[" _
+begin_object    = _ "{" _
+end_array       = _ "]" _
+end_object      = _ "}" _
+name_separator  = _ ":" _
+value_separator = _ "," _
+assignment      = _ "=" _
+
+/* ----- string ----- */
 
 string "string"
     = '"' chars:double_string_char* '"' { return chars.join(""); }
-    / "'" chars:single_string_char* "'" { return chars.join(""); }
 
 double_string_char
     = !('"' / "\\") char_:. { return char_; }
-    / "\\" sequence:escape_sequence { return sequence; }
-
-single_string_char
-    = !("'" / "\\") char_:. { return char_; }
     / "\\" sequence:escape_sequence { return sequence; }
 
 escape_sequence
@@ -71,7 +117,15 @@ character_escape_sequence
     / non_escape_character
 
 single_escape_character
-    = char_:['"\\bfnrtv] { return char_.replace("b", "\b").replace("f", "\f").replace("n", "\n").replace("r", "\r").replace("t", "\t").replace("v", "\x0B"); }
+    = char_:['"\\bfnrtv] {
+        return char_
+        .replace("b", "\b")
+        .replace("f", "\f")
+        .replace("n", "\n")
+        .replace("r", "\r")
+        .replace("t", "\t")
+        .replace("v", "\x0B");
+    }
 
 non_escape_character
     = !escape_character char_:. { return char_; }
@@ -83,16 +137,28 @@ escape_character
     / "u"
 
 hex_escape_sequence
-    = "x" h1:hex_digit h2:hex_digit { return String.fromCharCode(+("0x" + h1 + h2)); }
+    = "x" h1:hex_digit h2:hex_digit {
+        return String.fromCharCode(+("0x" + h1 + h2));
+    }
 
 unicode_escape_sequence
-    = "u" h1:hex_digit h2:hex_digit h3:hex_digit h4:hex_digit { return String.fromCharCode(+("0x" + h1 + h2 + h3 + h4)); }
+    = "u" h1:hex_digit h2:hex_digit h3:hex_digit h4:hex_digit {
+        return String.fromCharCode(+("0x" + h1 + h2 + h3 + h4));
+    }
 
-/*
-    numeric
-*/
+/* ----- number ----- */
 
-number "number"
+number
+    = numeric:numeric power:power "b" { return numeric * Math.pow(1024, power); }
+    / numeric:numeric power:power { return numeric * Math.pow(1000, power); }
+    / numeric
+
+power
+    = [kK] { return 1; }
+    / [mM] { return 2; }
+    / [gG] { return 3; }
+
+numeric
     = "-" _ number:number { return -number; }
     / int_:int frac:frac exp:exp { return +(int_ + frac + exp); }
     / int_:int frac:frac { return +(int_ + frac); }
@@ -104,6 +170,24 @@ int
     = digit19:digit19 digits:digits { return digit19 + digits; }
     / digit:digit
 
+/* ----- boolean ----- */
+
+boolean
+    = true { return true; }
+    / false { return false; }
+
+true
+    = "true"
+    / "on"
+    / "yes"
+
+false
+    = "false"
+    / "off"
+    / "no"
+
+/* ----- foundation ----- */
+
 frac
     = "." digits:digits { return "." + digits; }
 
@@ -114,7 +198,7 @@ digits
     = digits:digit+ { return digits.join(""); }
 
 e
-    = e:[eE] sign:[+-]? { return e + sign; }
+    = e:[eE] sign:[+-]? { return sign ? e + sign : e; }
 
 digit
     = [0-9]
