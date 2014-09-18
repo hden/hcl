@@ -48,7 +48,7 @@ block_member
     / parent_key:identifier value:block _
 
 identifier
-    = first:[a-zA-Z_] rest:[a-zA-Z0-9_$]* { return first + rest.join(""); }
+    = first:[a-zA-Z_] rest:[a-zA-Z0-9_$-]* { return first + rest.join(""); }
     / string
 
 /* ----- map ----- */
@@ -103,7 +103,8 @@ string "string"
     = '"' chars:double_string_char* '"' { return chars.join(""); }
 
 double_string_char
-    = !('"' / "\\") char_:. { return char_; }
+    = '("' chars:double_string_char* '")' { return '("' + chars.join("") + '")'; }
+    / !('"' / "\\") char_:. { return char_; }
     / "\\" sequence:escape_sequence { return sequence; }
 
 escape_sequence

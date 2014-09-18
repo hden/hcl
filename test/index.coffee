@@ -55,16 +55,20 @@ describe 'parser', ->
 
     parse = make_parse('decoder_fixture')
 
+    it 'basic.hcl', ->
+        ast = parse('basic.hcl')
+        expect(ast).to.be.an('array')
+
+    it 'basic_squish.hcl', ->
+        ast = parse('basic_squish.hcl')
+        expect(ast).to.be.an('array')
+
     it 'decode_policy.hcl', ->
         ast = parse('decode_policy.hcl')
         expect(ast).to.be.an('array')
 
     it 'decode_tf_variable.hcl', ->
         ast = parse('decode_tf_variable.hcl')
-        expect(ast).to.be.an('array')
-
-    it 'empty.hcl', ->
-        ast = parse('empty.hcl')
         expect(ast).to.be.an('array')
 
     it 'empty.hcl', ->
