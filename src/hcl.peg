@@ -1,6 +1,20 @@
 
 start
-    = _ sections:section* _ { return sections; }
+    = _ sections:section* _ {
+        var root = {};
+
+        sections.forEach(function (el) {
+            var parent = root[el.parent_key]
+
+            if (Array.isArray(parent)) {
+                root[el.parent_key] = parent.concat(el.value);
+            } else {
+                root[el.parent_key] = el.value;
+            }
+        });
+
+        return root;
+    }
 
 literal
     = boolean
@@ -14,7 +28,23 @@ literal
 
 section
     = parent_key:identifier _ value:section {
-        return {parent_key:parent_key, hint: 'section', value: value};
+        var child;
+        var inner = {};
+        // console.log('foo %j', value);
+
+        switch(value.hint) {
+            case 'section':
+                inner[value.parent_key] = value.value;
+                child = [inner];
+                break;
+            case 'block':
+                child = value.value;
+                break;
+            default:
+                child = value
+        };
+
+        return {parent_key:parent_key, hint: 'section', value: child};
     }
     / block_member
     / block
@@ -27,15 +57,15 @@ block
             first:block_member
             rest:(_ m:block_member { return m; })*
             {
-                var result = {hint: 'block'};
-
-                [first]
+                var value = [first]
                 .concat(rest)
-                .forEach(function (e) {
-                    result[e.parent_key] = e.value;
+                .map(function (el) {
+                    var o = {};
+                    o[el.parent_key] = el.value;
+                    return o;
                 });
 
-                return result;
+                return {hint: 'block', value: value};
             }
         )?
     end_object
